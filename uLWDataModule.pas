@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,System.JSON,
   Data.DBXPlatform,System.Generics.Collections, ulwTable,System.Variants,
-  System.NetEncoding;
+  System.NetEncoding,Windows;
 
 type
 {$METHODINFO ON}
@@ -23,9 +23,11 @@ type
     procedure jsonToDataSet(data:TJSONObject; AdoDataSet:TAdoDataSet);
     procedure add(tableName:String; key:String);
     function TryGetValue(const Key: String; out Value: TLwTable): Boolean;
+    function getValue(data:TJSONObject; name:String):TJSONValue;
 
   public
     { Public declarations }
+     function hello():String;
      function dataset(resName: string): TJSONArray;
      function cancelDataSet(resName:String):integer;
      function acceptDataSet(resName:String; data:TJSONObject):boolean;
@@ -133,7 +135,28 @@ begin
 end;
 
 procedure TLwDataModule.DataModuleCreate(Sender: TObject);
+
+  function GetHostName:String;
+   var
+    ComputerName: array[0..MAX_COMPUTERNAME_LENGTH+1] of char;
+    Size: Cardinal;
+   begin
+      result:='';
+      Size := MAX_COMPUTERNAME_LENGTH+1;
+      GetComputerName(ComputerName, Size);
+      Result:=StrPas(ComputerName);
+  end;
+var
+  computerName :String;
 begin
+  computerName := GetHostName;
+  if Pos('ledway', computerName) >0 then
+  begin
+    ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;User ID=sa;Initial Catalog=iSamplePub;Data Source=localhost'
+  end else begin
+     ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;User ID=sa;Initial Catalog=iSamplePub;Data Source=vip.ledway.com.tw'
+  end;
+
   FResource :=  TObjectDictionary<String,TlwTable>.Create;
   initResources;
 end;
@@ -146,6 +169,8 @@ var
   AdoDataSet:TAdoDataSet;
   metaData: TDSInvocationMetadata;
   query:String;
+  orderBy:String;
+  sql:String;
 begin
   result := nil;
   if TryGetValue(resName, lwTable) then
@@ -153,11 +178,13 @@ begin
     try
       metaData := GetInvocationMetadata;
       query := metaData.QueryParams.Values['query'];
+      orderBy := metaData.QueryParams.Values['orderBy'];
       if(query ='') then
       begin
         query := '1=1';
       end;
-      AdoDataSet := createAdoDataSet(lwTable.getSql(query));
+      sql := lwTable.getSql(query) + orderBy;
+      AdoDataSet := createAdoDataSet(sql);
       result := dataSetToJson(AdoDataSet);
     finally
       FreeAndNil(AdoDataSet);
@@ -178,6 +205,7 @@ var
   field:TField;
   jsonPair:TJSONPair;
   item:TJSONObject;
+  fieldName:String;
 begin
   dataSet.Open;
   result := TJSONArray.Create;
@@ -188,19 +216,21 @@ begin
     for i := 0 to DataSet.FieldCount -1 do
     begin
       field := DataSet.Fields[i];
+      fieldName := field.FieldName;
+      fieldName := LowerCase(fieldName) ;
       jsonPair := nil;
       if(field.IsNull) then
       begin
-        jsonPair := TJSONPair.Create(field.FieldName, TJSONNull.Create);
+        jsonPair := TJSONPair.Create(FieldName, TJSONNull.Create);
       end
       else if(field is TNumericField) then
       begin
-         jsonPair := TJSONPair.Create(field.FieldName, TJSONNumber.Create(field.AsFloat));
+         jsonPair := TJSONPair.Create(FieldName, TJSONNumber.Create(field.AsFloat));
       end else if (field is TStringField) then begin
-         jsonPair := TJSONPair.Create(field.FieldName, field.AsString);
+         jsonPair := TJSONPair.Create(FieldName, field.AsString);
       end else if(field is TBlobField) then
       begin
-        jsonPair := TJSONPair.Create(field.FieldName, TNetEncoding.Base64.EncodeBytesToString(TBlobField(field).Value));
+        jsonPair := TJSONPair.Create(FieldName, TNetEncoding.Base64.EncodeBytesToString(TBlobField(field).Value));
       end;
       if(jsonPair <> nil) then
       begin
@@ -216,6 +246,36 @@ begin
 
 end;
 
+
+function TLwDataModule.getValue(data: TJSONObject; name: String): TJSONValue;
+var
+ e:TJSONPairEnumerator;
+
+begin
+  result:= nil;
+  e := data.GetEnumerator;
+  try
+    while e.MoveNext do
+    begin
+      if (UpperCase(name) = UpperCase(e.GetCurrent.JsonString.Value)) then
+      begin
+        result := e.GetCurrent.JsonValue;
+         break;
+      end;
+    end;
+  finally
+     e.Free;
+  end;
+
+
+
+
+end;
+
+function TLwDataModule.hello: String;
+begin
+  result := 'hello';
+end;
 
 procedure TLwDataModule.initResources;
 begin
@@ -255,12 +315,8 @@ begin
   odsQueryTableKey.Close;
   odsQueryTableKey.Parameters.FindParam('tableName').Value := Key;
   odsQueryTableKey.Open;
-  if(odsQueryTableKey.RecordCount >0) then
-  begin
-  //  result := true;
-    add(key, odsQueryTableKey.Fields[0].AsString);
+   add(key, odsQueryTableKey.Fields[0].AsString);
     result := FResource.TryGetValue(key, Value);
-  end;
 
 end;
 
@@ -293,10 +349,10 @@ begin
     begin
       name := param.Name;
       name := copy(name, 2, length(name) -1 );
-      jsonValue := data.GetValue(name);
+      jsonValue := getValue(data, name);
       if(nil <> jsonValue) then
       begin
-        if(param.DataType in [ftString,ftWideString]) then
+        if(param.DataType in [ftString,ftWideString, ftInteger]) then
         begin
           param.Value := jsonValue.Value;
         end else if(param.DataType in [ftBytes, ftVarBytes]) then

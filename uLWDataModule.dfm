@@ -6,8 +6,7 @@ object LwDataModule: TLwDataModule
   object ADOConnection: TADOConnection
     ConnectionString = 
       'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;U' +
-      'ser ID=sa;Initial Catalog=iSamplePub;Data Source=vip.ledway.com.' +
-      'tw'
+      'ser ID=sa;Initial Catalog=iSamplePub;Data Source=localhost'
     LoginPrompt = False
     Provider = 'SQLOLEDB.1'
     Left = 48
