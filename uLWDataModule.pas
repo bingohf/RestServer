@@ -34,6 +34,8 @@ type
      function acceptDataSet(resName:String; data:TJSONObject):boolean;
      function updateDataSet(dataSetName: string; data:TJSONObject) :TJSONArray ;
      function updateSp(spName:String; data:TJSONObject):TJSONObject;
+
+     function acceptGroup(guid: string;data:TJSONObject): TJSONObject;
   end;
 
 var
@@ -81,6 +83,53 @@ begin
   end else
   begin
        GetInvocationMetadata().ResponseCode := 404;
+  end;
+end;
+
+function TLwDataModule.acceptGroup(guid: string;data:TJSONObject): TJSONObject;
+const
+   SQL_SML ='select * from [ScanMasterLine] where series = ''%s''';
+var
+  macNo :String;
+  dataSet:TDataSet;
+begin
+  macNo := '';
+  result := TJSONObject.Create;
+  if(data.GetValue('macNo') <> nil)   then
+  begin
+    macNo := data.GetValue('macNo').Value
+  end;
+  try
+      try
+        dataSet := nil;
+        dataSet := createAdoDataSet(format(SQL_SML,[ guid]));
+        if(dataSet.Eof) then
+        begin
+          GetInvocationMetadata().ResponseCode := 404;
+          exit;
+        end;
+        if(dataSet.FieldByName('macNo').AsString = '') || (dataSet.FieldByName('macNo').AsString = macNo) then
+        begin
+          dataSet.Edit;
+          dataSet.FieldByName('macNo').AsString := macNo;
+          dataSet.Post;
+        end else
+        begin
+          result.AddPair('error', );
+          GetInvocationMetadata().ResponseCode := 500;
+        end;
+      except  on e:Exception do
+        begin
+         result.AddPair('error', e.Message);
+         GetInvocationMetadata().ResponseCode := 500;
+        end;
+      end;
+
+  finally
+    if(dataSet <> nil ) then
+    begin
+      dataSet.Free;
+    end;
   end;
 end;
 
