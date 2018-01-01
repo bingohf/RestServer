@@ -28,6 +28,7 @@ type
   public
     { Public declarations }
      function hello():String;
+     function sql(sql: string): TJSONArray;
      function dataset(resName: string): TJSONArray;
      function cancelDataSet(resName:String):integer;
      function acceptDataSet(resName:String; data:TJSONObject):boolean;
@@ -152,7 +153,7 @@ begin
   computerName := GetHostName;
   if Pos('ledway', computerName) >0 then
   begin
-    ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;User ID=sa;Initial Catalog=iSamplePub;Data Source=localhost'
+    ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=Jason@ledway;Persist Security Info=True;User ID=ledwaysa;Initial Catalog=iSamplePub;Data Source=ledway2.database.windows.net'
   end else begin
      ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;User ID=sa;Initial Catalog=iSamplePub;Data Source=vip.ledway.com.tw'
   end;
@@ -306,6 +307,21 @@ begin
   end;
 
 
+end;
+
+function TLwDataModule.sql(sql: string): TJSONArray;
+var
+  AdoDataSet:TAdoDataSet;
+  metaData: TDSInvocationMetadata;
+begin
+  result := nil;
+  try
+    metaData := GetInvocationMetadata;
+    AdoDataSet := createAdoDataSet(sql);
+    result := dataSetToJson(AdoDataSet);
+  finally
+    FreeAndNil(AdoDataSet);
+  end;
 end;
 
 function TLwDataModule.TryGetValue(const Key: String; out Value: TLwTable): Boolean;
