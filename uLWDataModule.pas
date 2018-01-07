@@ -108,14 +108,16 @@ begin
           GetInvocationMetadata().ResponseCode := 404;
           exit;
         end;
-        if(dataSet.FieldByName('macNo').AsString = '') || (dataSet.FieldByName('macNo').AsString = macNo) then
+        if(dataSet.FieldByName('macNo').AsString = '') or (dataSet.FieldByName('macNo').AsString = macNo) then
         begin
           dataSet.Edit;
           dataSet.FieldByName('macNo').AsString := macNo;
+          result.AddPair('myTaxNo', dataSet.FieldByName('MyTaxNo').AsString);
+          result.AddPair('line', dataSet.FieldByName('line').AsString);
           dataSet.Post;
         end else
         begin
-          result.AddPair('error', );
+          result.AddPair('error', 'guid has been assigned');
           GetInvocationMetadata().ResponseCode := 500;
         end;
       except  on e:Exception do
