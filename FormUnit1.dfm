@@ -45,7 +45,7 @@ object Form1: TForm1
     Width = 121
     Height = 21
     TabOrder = 2
-    Text = '8089'
+    Text = '8080'
   end
   object ButtonOpenBrowser: TButton
     Left = 24
