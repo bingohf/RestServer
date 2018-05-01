@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,System.JSON,
   Data.DBXPlatform,System.Generics.Collections, ulwTable,System.Variants,
-  System.NetEncoding,Windows;
+  System.NetEncoding,Windows, DateUtils;
 
 type
 {$METHODINFO ON}
@@ -274,6 +274,9 @@ begin
       if(field.IsNull) then
       begin
         jsonPair := TJSONPair.Create(FieldName, TJSONNull.Create);
+      end  else if field is TDateTimeField then
+      begin
+         jsonPair :=  TJSONPair.Create(FieldName, DateToIso8601(TDateTimeField(field).Value, false));
       end
       else if(field is TNumericField) then
       begin
