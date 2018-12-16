@@ -34,7 +34,7 @@ type
      function acceptDataSet(resName:String; data:TJSONObject):boolean;
      function updateDataSet(dataSetName: string; data:TJSONObject) :TJSONArray ;
      function updateSp(spName:String; data:TJSONObject):TJSONObject;
-
+     function updateSpDataSet(spName:String; data:TJSONObject):TJSONArray;
      function acceptGroup(guid: string;data:TJSONObject): TJSONObject;
   end;
 
@@ -458,6 +458,49 @@ begin
       result.AddPair(jsonItem);
     end;
   end;
+end;
+
+function TLwDataModule.updateSpDataSet(spName: String;
+  data: TJSONObject): TJSONArray;
+var
+  emuerator:TJSONPairEnumerator;
+  jsonItem:TJSONPair;
+  param:TParameter;
+  i:integer;
+  name:String;
+  jsonValue:TJSONValue;
+begin
+  adoSp.ProcedureName := spName;
+  adoSp.Parameters.Clear;
+  adoSp.Prepared := false;
+  adoSp.Prepared := true;
+  adoSp.Parameters.Refresh;
+
+
+  for i := 0 to adoSp.Parameters.Count -1 do
+  begin
+    param :=  adoSp.Parameters.Items[i];
+    if(param.Direction  in [ pdInput, pdInputOutput] )  then
+    begin
+      name := param.Name;
+      name := copy(name, 2, length(name) -1 );
+      jsonValue := getValue(data, name);
+      if(nil <> jsonValue) then
+      begin
+        if(param.DataType in [ftString,ftWideString, ftInteger]) then
+        begin
+          param.Value := jsonValue.Value;
+        end else if(param.DataType in [ftBytes, ftVarBytes]) then
+        begin
+           param.Value := TNetEncoding.Base64.DecodeStringToBytes(jsonValue.Value);
+        end;
+        continue;
+      end ;
+      param.Value := Null;
+    end;
+  end;
+  adoSp.Open;
+  result := dataSetToJson(adoSp);
 end;
 
 end.
