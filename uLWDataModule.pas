@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,System.JSON,
   Data.DBXPlatform,System.Generics.Collections, ulwTable,System.Variants,
-  System.NetEncoding,Windows, DateUtils;
+  System.NetEncoding,Windows, DateUtils, Datasnap.DBClient;
 
 type
 {$METHODINFO ON}
@@ -35,7 +35,9 @@ type
      function updateDataSet(dataSetName: string; data:TJSONObject) :TJSONArray ;
      function updateSp(spName:String; data:TJSONObject):TJSONObject;
      function updateSpDataSet(spName:String; data:TJSONObject):TJSONArray;
+     function SpStream(spName:String) :TStream;
      function acceptGroup(guid: string;data:TJSONObject): TJSONObject;
+
   end;
 
 var
@@ -211,6 +213,7 @@ begin
 
   FResource :=  TObjectDictionary<String,TlwTable>.Create;
   initResources;
+
 end;
 
 
@@ -361,6 +364,65 @@ begin
   end;
 
 
+end;
+
+function TLwDataModule.SpStream(spName:String): TStream;
+var
+  param:TParameter;
+  i:integer;
+  name:String;
+  value:String;
+  metaData: TDSInvocationMetadata;
+  blobFieldName:String;
+  outField : TField;
+  adoSp:TADOStoredProc;
+begin
+  adoSp := TADOStoredProc.Create(self);
+  try
+    adoSp.Connection := AdoConnection;
+    adoSp.ProcedureName := spName;
+    adoSp.Parameters.Clear;
+    adoSp.Prepared := false;
+    adoSp.Prepared := true;
+    adoSp.Parameters.Refresh;
+    metaData := GetInvocationMetadata;
+    blobFieldName := metaData.QueryParams.Values['out_field'];
+    for i := 0 to adoSp.Parameters.Count -1 do
+    begin
+      param :=  adoSp.Parameters.Items[i];
+      if(param.Direction  in [ pdInput, pdInputOutput] )  then
+      begin
+        name := param.Name;
+        name := copy(name, 2, length(name) -1 );
+        value := metaData.QueryParams.Values[name];
+        if(value <> '') then
+        begin
+          if(param.DataType in [ftString,ftWideString]) then
+          begin
+            param.Value := value;
+          end else if(param.DataType in [ftInteger]) then
+          begin
+             param.Value := strtoInt(value);
+          end;
+          continue;
+        end ;
+        param.Value := Null;
+      end;
+    end;
+    adoSp.Open;
+    outField := adoSp.FieldByName(blobFieldName);
+    if outField.IsBlob then
+    begin
+      result := TMemoryStream.Create();
+      TBlobField(outField).SaveToStream(result);
+      result.Position := 0;
+    end else
+    begin
+      GetInvocationMetadata().ResponseCode := 404;
+    end;
+  finally
+     adoSp.Free;
+  end;
 end;
 
 function TLwDataModule.sql(sql: string): TJSONArray;
