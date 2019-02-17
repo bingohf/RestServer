@@ -28,6 +28,7 @@ type
   public
     { Public declarations }
      function hello():String;
+     function hello2():TStream;
      function sql(sql: string): TJSONArray;
      function dataset(resName: string): TJSONArray;
      function cancelDataSet(resName:String):integer;
@@ -36,6 +37,7 @@ type
      function updateSp(spName:String; data:TJSONObject):TJSONObject;
      function updateSpDataSet(spName:String; data:TJSONObject):TJSONArray;
      function SpStream(spName:String) :TStream;
+     function spJson(SpName:String):TStream;
      function acceptGroup(guid: string;data:TJSONObject): TJSONObject;
 
   end;
@@ -335,6 +337,16 @@ begin
   result := 'hello';
 end;
 
+function TLwDataModule.hello2: TStream;
+var
+  writer:TSTreamWriter;
+begin
+  result:= TMemoryStream.Create;
+  writer := TStreamWriter.Create(result, TEncoding.UTF8);
+  writer.Write('abcdefgÖÐ¹ú');
+  writer.Close;
+end;
+
 procedure TLwDataModule.initResources;
 begin
   add('RDID1','localGUID');
@@ -364,6 +376,87 @@ begin
   end;
 
 
+end;
+
+
+function TLwDataModule.spJson(SpName: String): TStream;
+var
+  param:TParameter;
+  i:integer;
+  name:String;
+  value:String;
+  metaData: TDSInvocationMetadata;
+  blobFieldName:String;
+  writer:TStreamWriter;
+  adoSp:TADOStoredProc;
+  outfield:TField;
+begin
+  result := TMemoryStream.Create();
+  adoSp := TADOStoredProc.Create(self);
+  writer := TStreamWriter.Create(result, TEncoding.UTF8);
+  try
+    try
+      adoSp.Connection := AdoConnection;
+      adoSp.ProcedureName := spName;
+      adoSp.Parameters.Clear;
+      adoSp.Prepared := false;
+      adoSp.Prepared := true;
+      adoSp.Parameters.Refresh;
+      metaData := GetInvocationMetadata;
+      blobFieldName := metaData.QueryParams.Values['out_field'];
+      for i := 0 to adoSp.Parameters.Count -1 do
+      begin
+        param :=  adoSp.Parameters.Items[i];
+        if(param.Direction  in [ pdInput, pdInputOutput] )  then
+        begin
+          name := param.Name;
+          name := copy(name, 2, length(name) -1 );
+          value := metaData.QueryParams.Values[name];
+          if(value <> '') then
+          begin
+            if(param.DataType in [ftString,ftWideString]) then
+            begin
+              param.Value := value;
+            end else if(param.DataType in [ftInteger]) then
+            begin
+               param.Value := strtoInt(value);
+            end;
+            continue;
+          end ;
+          param.Value := Null;
+        end;
+      end;
+      adoSp.Open;
+      if adoSp.RecordCount =0  then
+      begin
+        writer.Write('[]');
+      end else
+      begin
+        outField := adoSp.Fields[0];
+        adosp.First;
+        while not adoSp.Eof do
+        begin
+          writer.Write(outField.AsString);
+          adoSp.Next;
+        end;
+      end;
+
+      GetInvocationMetadata().ResponseCode := 200;
+      GetInvocationMetadata().ResponseContentType := 'text/html;charset=UTF-8';
+    except on e:Exception do
+      begin
+       GetInvocationMetadata().ResponseCode := 500;
+       writer.writeline(e.message);
+      end;
+    end;
+  finally
+     adoSp.Free;
+     if writer <> nil  then
+     begin
+       writer.Close;
+       writer.Free;
+     end;
+  end;
 end;
 
 function TLwDataModule.SpStream(spName:String): TStream;
@@ -416,6 +509,7 @@ begin
       result := TMemoryStream.Create();
       TBlobField(outField).SaveToStream(result);
       result.Position := 0;
+      GetInvocationMetadata().ResponseContentType := 'image/png'
     end else
     begin
       GetInvocationMetadata().ResponseCode := 404;
