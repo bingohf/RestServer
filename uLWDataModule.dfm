@@ -4,6 +4,7 @@ object LwDataModule: TLwDataModule
   Height = 245
   Width = 286
   object ADOConnection: TADOConnection
+    CommandTimeout = 300
     ConnectionString = 
       'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;U' +
       'ser ID=sa;Initial Catalog=iSamplePub;Data Source=localhost'

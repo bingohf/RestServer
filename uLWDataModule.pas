@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,System.JSON,
   Data.DBXPlatform,System.Generics.Collections, ulwTable,System.Variants,
-  System.NetEncoding,Windows, DateUtils, Datasnap.DBClient;
+  System.NetEncoding,Windows, DateUtils, Datasnap.DBClient,System.IniFiles,Forms;
 
 type
 {$METHODINFO ON}
@@ -204,13 +204,28 @@ procedure TLwDataModule.DataModuleCreate(Sender: TObject);
   end;
 var
   computerName :String;
+  iniFile:TIniFile;
+  iniConnectionStr:String;
 begin
+  iniConnectionStr := '';
+  try
+    iniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini')) ;
+    iniConnectionStr := iniFile.ReadString('Service','ConnectionString','');
+  finally
+    FreeAndNil(iniFile);
+  end;
   computerName := GetHostName;
-  if Pos('ledway', computerName) >0 then
+  if iniConnectionStr <>'' then
   begin
-    ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=Jason@ledway;Persist Security Info=True;User ID=ledwaysa;Initial Catalog=iSamplePub;Data Source=ledway2.database.windows.net'
-  end else begin
-     ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;User ID=sa;Initial Catalog=iSamplePub;Data Source=vip.ledway.com.tw'
+    ADOConnection.ConnectionString := iniConnectionStr;
+  end else
+  begin
+    if Pos('ledway', computerName) >0 then
+    begin
+      ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=Jason@ledway;Persist Security Info=True;User ID=ledwaysa;Initial Catalog=iSamplePub;Data Source=ledway2.database.windows.net'
+    end else begin
+       ADOConnection.ConnectionString := 'Provider=SQLOLEDB.1;Password=ledway;Persist Security Info=True;User ID=sa;Initial Catalog=iSamplePub;Data Source=vip.ledway.com.tw'
+    end;
   end;
 
   FResource :=  TObjectDictionary<String,TlwTable>.Create;
@@ -397,6 +412,7 @@ begin
   try
     try
       adoSp.Connection := AdoConnection;
+      adoSp.CommandTimeout := 300;
       adoSp.ProcedureName := spName;
       adoSp.Parameters.Clear;
       adoSp.Prepared := false;
@@ -473,6 +489,7 @@ begin
   adoSp := TADOStoredProc.Create(self);
   try
     adoSp.Connection := AdoConnection;
+    adoSp.CommandTimeout := 300;
     adoSp.ProcedureName := spName;
     adoSp.Parameters.Clear;
     adoSp.Prepared := false;

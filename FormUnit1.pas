@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
-  Vcl.AppEvnts, Vcl.StdCtrls, IdHTTPWebBrokerBridge, Web.HTTPApp;
+  Vcl.AppEvnts, Vcl.StdCtrls, IdHTTPWebBrokerBridge, Web.HTTPApp,System.IniFiles;
 
 type
   TForm1 = class(TForm)
@@ -75,7 +75,15 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  iniFile:TIniFile;
 begin
+  try
+    iniFile := TIniFile.Create(ChangeFileExt(Application.ExeName,'.ini')) ;
+    EditPort.Text := iniFile.ReadString('Service','Port','8080');
+  finally
+    FreeAndNil(iniFile);
+  end;
   FServer := TIdHTTPWebBrokerBridge.Create(Self);
   startServer;
 end;
