@@ -5,7 +5,7 @@ interface
 uses
   System.SysUtils, System.Classes, Data.DB, Data.Win.ADODB,System.JSON,
   Data.DBXPlatform,System.Generics.Collections, ulwTable,System.Variants,
-  System.NetEncoding,Windows, DateUtils, Datasnap.DBClient,System.IniFiles,Forms;
+  System.NetEncoding,Windows, DateUtils, Datasnap.DBClient,System.IniFiles,Forms,dialogs;
 
 type
 {$METHODINFO ON}
@@ -24,7 +24,7 @@ type
     procedure add(tableName:String; key:String);
     function TryGetValue(const Key: String; out Value: TLwTable): Boolean;
     function getValue(data:TJSONObject; name:String):TJSONValue;
-
+    procedure copyJson(source,dest:TJSONObject);
   public
     { Public declarations }
      function hello():String;
@@ -39,7 +39,7 @@ type
      function SpStream(spName:String) :TStream;
      function spJson(SpName:String):TStream;
      function acceptGroup(guid: string;data:TJSONObject): TJSONObject;
-
+     function updateList(spName:String;data:TJSONObject) :TJSONObject;
   end;
 
 var
@@ -181,6 +181,27 @@ begin
        GetInvocationMetadata().ResponseCode := 404;
   end;
 end;
+
+procedure TLwDataModule.copyJson(source, dest: TJSONObject);
+var
+ e:TJSONPairEnumerator;
+ pair:TJsonPair;
+ name:String;
+begin
+  e := source.GetEnumerator;
+  try
+    while e.MoveNext do
+    begin
+      pair := e.GetCurrent;
+      name := pair.JsonString.Value;
+      dest.AddPair(pair.Clone as TJsonPair)
+    end;
+  finally
+     e.Free;
+  end;
+end;
+
+
 
 function TLwDataModule.createAdoDataSet(sql: String): TAdoDataSet;
 begin
@@ -341,10 +362,6 @@ begin
   finally
      e.Free;
   end;
-
-
-
-
 end;
 
 function TLwDataModule.hello: String;
@@ -566,6 +583,29 @@ end;
 function TLwDataModule.updateDataSet(dataSetName: string;
   data: TJSONObject): TJSONArray;
 begin
+
+end;
+
+function TLwDataModule.updateList(spName:String;data: TJSONObject): TJSONObject;
+var strings:TStringList;
+var tempJson :  TJSONObject;
+var i:integer;
+begin
+  result :=  TJSONObject.Create;
+  strings := TStringList.Create;
+  tempJson :=   data.clone as TJSONObject;
+  strings.Text := trim(data.GetValue('strings').Value);
+  result := TJSONObject.Create;
+  for i  := 0 to strings.Count - 1 do
+  begin
+     tempJson.RemovePair('string');
+     tempJson.AddPair('string',strings[i]);
+     FreeAndNil(result);
+     //showmessage(tempJson.ToJSON);
+     result := updateSp(spName,  tempJson)
+  end;
+
+
 
 end;
 
