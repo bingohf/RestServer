@@ -118,6 +118,9 @@ begin
           dataSet.FieldByName('macNo').AsString := macNo;
           result.AddPair('myTaxNo', dataSet.FieldByName('MyTaxNo').AsString);
           result.AddPair('line', dataSet.FieldByName('line').AsString);
+          result.AddPair('sm_server', dataSet.FieldByName('SM_Server').AsString);
+          result.AddPair('sm_port', dataSet.FieldByName('SM_PORT').AsString);
+          result.AddPair('sm_company', dataSet.FieldByName('SM_Company').AsString);
           dataSet.Post;
         end else
         begin
