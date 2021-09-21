@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{186424CC-316C-4209-9721-D977549B1CDE}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="mobileRest.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="mobileRest_Service.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="mobileRest_Service2.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="mobileRest">
+        <MSBuild Projects="mobileRest.dproj"/>
+    </Target>
+    <Target Name="mobileRest:Clean">
+        <MSBuild Projects="mobileRest.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="mobileRest:Make">
+        <MSBuild Projects="mobileRest.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="mobileRest_Service">
+        <MSBuild Projects="mobileRest_Service.dproj"/>
+    </Target>
+    <Target Name="mobileRest_Service:Clean">
+        <MSBuild Projects="mobileRest_Service.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="mobileRest_Service:Make">
+        <MSBuild Projects="mobileRest_Service.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="mobileRest_Service2">
+        <MSBuild Projects="mobileRest_Service2.dproj"/>
+    </Target>
+    <Target Name="mobileRest_Service2:Clean">
+        <MSBuild Projects="mobileRest_Service2.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="mobileRest_Service2:Make">
+        <MSBuild Projects="mobileRest_Service2.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="mobileRest;mobileRest_Service;mobileRest_Service2"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="mobileRest:Clean;mobileRest_Service:Clean;mobileRest_Service2:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="mobileRest:Make;mobileRest_Service:Make;mobileRest_Service2:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
